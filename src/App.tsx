@@ -3,7 +3,7 @@ import { useNavigator } from './hooks/useNavigator';
 import { OwlNavigator } from './components/OwlNavigator';
 
 function App() {
-  const { navData, error } = useNavigator();
+  const { navData, error, errorCode } = useNavigator();
 
   return (
     <div className="app-container">
@@ -13,11 +13,10 @@ function App() {
       </header>
 
       <main className="app-main">
-        <OwlNavigator data={navData} error={error} />
+        <OwlNavigator data={navData} error={error} errorCode={errorCode} />
       </main>
     </div>
   );
 }
 
 export default App;
-

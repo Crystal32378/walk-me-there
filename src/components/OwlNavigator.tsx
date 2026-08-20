@@ -7,16 +7,17 @@ import { DiagnosticDashboard } from './DiagnosticDashboard';
 interface Props {
   data: NavData | null;
   error: string | null;
+  errorCode: number | null;
 }
 
 const CONFUSED_RESPONSES: Record<string, string> = {
-  '我現在到底面向哪裡？': '不用擔心！順著你的雙腳往前踏出三到五步，我就能為你抓準面向的角度。',
-  '你說的是哪一個左轉？': '請先站在路口，看看前面有沒有最明顯的路標或轉角。我們要轉的是順著路網走的那一條。',
-  '是這個路口嗎？': '如果是對的路口，順著路線走幾步後，我會告訴你「對，就是這個方向」。',
-  '我覺得我走錯了。': '沒關係，請先停下腳步！如果真的走反或走偏，我會立刻提醒你並帶你折返。'
+  '我現在到底面向哪裡？': '你站著不動時，我不一定能可靠知道面向。先安全地走三到五步；如果裝置提供可信的移動方向，我再幫你判斷。',
+  '你說的是哪一個左轉？': '我現在還沒有路網或路口資料，所以不能可靠地指出哪一條左轉。先不要照我猜。',
+  '是這個路口嗎？': '我目前不能辨認你是不是在正確路口；現在只能看你和測試路線的相對位置與移動方向。',
+  '我覺得我走錯了。': '先停一下。我可以檢查你是否偏離目前路線；如果裝置提供可信的移動方向，也能判斷是否走反。'
 };
 
-export const OwlNavigator: React.FC<Props> = ({ data, error }) => {
+export const OwlNavigator: React.FC<Props> = ({ data, error, errorCode }) => {
   const [showConfusedMenu, setShowConfusedMenu] = useState(false);
   const [activeResponse, setActiveResponse] = useState<string | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -31,7 +32,7 @@ export const OwlNavigator: React.FC<Props> = ({ data, error }) => {
           glowClass: 'glow-uncertain'
         };
       }
-      const humanErr = getHumanErrorMessage(error);
+      const humanErr = getHumanErrorMessage(errorCode);
       return {
         main: humanErr.main,
         sub: humanErr.sub,

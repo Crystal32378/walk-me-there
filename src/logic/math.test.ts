@@ -22,12 +22,22 @@ describe('Navigation Math', () => {
     expect(getBearingDelta(10, 350)).toBe(20);
   });
 
-  it('calculates cross-track distance', () => {
+  it('calculates cross-track distance inside a segment', () => {
     const start = { lat: 0, lng: 0 };
     const end = { lat: 0, lng: 1 };
     const p = { lat: 0.0001, lng: 0.5 }; // ~11m North of equator
     const xt = getCrossTrackDistance(p, start, end);
     expect(xt).toBeGreaterThan(10);
     expect(xt).toBeLessThan(12);
+  });
+
+  it('clamps distance past a finite segment endpoint', () => {
+    const start = { lat: 0, lng: 0 };
+    const end = { lat: 0, lng: 0.001 };
+    const p = { lat: 0, lng: 0.002 };
+    const distance = getCrossTrackDistance(p, start, end);
+
+    expect(distance).toBeGreaterThan(110);
+    expect(distance).toBeLessThan(112);
   });
 });
