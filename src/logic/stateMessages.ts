@@ -21,33 +21,33 @@ export const STATE_MESSAGES: Record<NavState, StateMessage> = {
     glowClass: 'glow-stationary'
   },
   ON_ROUTE: {
-    main: '對，就是這個方向。',
-    sub: '跟著我，我們正走在對的路上。',
+    main: '你還靠近目前這段路線。',
+    sub: '先慢慢走幾步，我會繼續確認你的移動方向。',
     moodColor: '#10B981',
     glowClass: 'glow-on-route'
   },
   WRONG_DIRECTION: {
-    main: '等等，你走反了。',
-    sub: '先轉身，我會重新帶你。',
+    main: '等等，裝置目前顯示的移動方向和這段路相反。',
+    sub: '先停一下；如果安全，轉身走幾步，我再幫你確認。',
     moodColor: '#F97316',
     glowClass: 'glow-wrong-direction'
   },
   OFF_ROUTE: {
-    main: '先停一下，我們走偏了。',
-    sub: '沒關係，我知道你在哪。',
+    main: '先停一下，你離目前這段路線有點遠了。',
+    sub: '我能確認你偏離了這段路線，但現在還不會重新規劃路線。',
     moodColor: '#EF4444',
     glowClass: 'glow-off-route'
   }
 };
 
-export function getHumanErrorMessage(rawError: string): { main: string; sub: string } {
-  if (rawError.includes('Timeout') || rawError.includes('timeout')) {
+export function getHumanErrorMessage(errorCode: number | null): { main: string; sub: string } {
+  if (errorCode === 3) {
     return {
       main: '我還在找準你的位置，再給我一下。',
       sub: '訊號有點弱，我們正在重新抓取。'
     };
   }
-  if (rawError.includes('Permission') || rawError.includes('denied')) {
+  if (errorCode === 1) {
     return {
       main: '我需要定位權限才能帶路。',
       sub: '請在瀏覽器設定中開啟位置存取權限。'

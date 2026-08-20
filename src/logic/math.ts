@@ -37,13 +37,44 @@ export function getBearing(p1: Coordinates, p2: Coordinates): number {
   return (toDegrees(θ) + 360) % 360;
 }
 
+/**
+ * Distance from a point to a finite route segment.
+ *
+ * The original v0.1 implementation measured cross-track distance to the
+ * infinitely extended great-circle line. That can report ~0m after the user
+ * has already walked beyond a segment endpoint. We keep the public function
+ * name for compatibility, but clamp the along-track position to the segment.
+ */
 export function getCrossTrackDistance(p: Coordinates, start: Coordinates, end: Coordinates): number {
-  const d13 = getDistance(start, p) / R;
+  const segmentLength = getDistance(start, end);
+  const distanceFromStart = getDistance(start, p);
+
+  if (segmentLength === 0) {
+    return distanceFromStart;
+  }
+
+  const δ13 = distanceFromStart / R;
   const θ13 = toRadians(getBearing(start, p));
   const θ12 = toRadians(getBearing(start, end));
+  const bearingDelta = θ13 - θ12;
 
-  const dXt = Math.asin(Math.sin(d13) * Math.sin(θ13 - θ12));
-  return Math.abs(dXt * R);
+  // Signed along-track angular distance on the great circle.
+  const δAt = Math.atan2(
+    Math.sin(δ13) * Math.cos(bearingDelta),
+    Math.cos(δ13)
+  );
+  const alongTrackDistance = δAt * R;
+
+  if (alongTrackDistance <= 0) {
+    return distanceFromStart;
+  }
+
+  if (alongTrackDistance >= segmentLength) {
+    return getDistance(end, p);
+  }
+
+  const δXt = Math.asin(Math.sin(δ13) * Math.sin(bearingDelta));
+  return Math.abs(δXt * R);
 }
 
 export function getBearingDelta(b1: number, b2: number): number {

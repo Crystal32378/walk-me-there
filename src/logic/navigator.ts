@@ -13,12 +13,13 @@ export function determineState(
     return 'UNCERTAIN_GPS';
   }
 
-  if (speed !== null && speed < config.STATIONARY_SPEED_THRESHOLD) {
-    return 'STATIONARY';
-  }
-
+  // Location relative to the route is more trustworthy/actionable than speed.
   if (crossTrackDistance > config.OFF_ROUTE_DISTANCE_THRESHOLD) {
     return 'OFF_ROUTE';
+  }
+
+  if (speed !== null && speed < config.STATIONARY_SPEED_THRESHOLD) {
+    return 'STATIONARY';
   }
 
   if (currentBearing !== null) {
@@ -26,7 +27,6 @@ export function determineState(
     if (delta > config.WRONG_DIRECTION_THRESHOLD) {
       return 'WRONG_DIRECTION';
     }
-    // We can also have a middle ground for 'UNCERTAIN_DIRECTION' but v0.1 wants 5 states.
   }
 
   return 'ON_ROUTE';
@@ -40,14 +40,28 @@ export function processNavigation(
   const { latitude, longitude, accuracy, speed, heading } = position.coords;
   const currentCoords = { lat: latitude, lng: longitude };
 
-  // For v0.1, we just find the closest segment or use a simple logic:
-  // Find the segment the user is currently on (or supposed to be on).
-  // Simple heuristic for v0.1: find the index where cross-track distance is minimized.
+  // A route needs at least one finite segment. Fail closed rather than crash or
+  // invent a segment when route data is missing/malformed.
+  if (polyline.length < 2) {
+    return {
+      currentCoords,
+      accuracy,
+      speed,
+      bearing: null,
+      expectedBearing: null,
+      bearingDelta: null,
+      crossTrackDistance: 0,
+      distanceToWaypoint: 0,
+      state: 'UNCERTAIN_GPS',
+      timestamp: position.timestamp
+    };
+  }
+
   let minXt = Infinity;
   let segmentIndex = 0;
 
   for (let i = 0; i < polyline.length - 1; i++) {
-    const xt = getCrossTrackDistance(currentCoords, polyline[i], polyline[i+1]);
+    const xt = getCrossTrackDistance(currentCoords, polyline[i], polyline[i + 1]);
     if (xt < minXt) {
       minXt = xt;
       segmentIndex = i;
@@ -56,13 +70,15 @@ export function processNavigation(
 
   const start = polyline[segmentIndex];
   const end = polyline[segmentIndex + 1];
-  
   const expectedBearing = getBearing(start, end);
   const distanceToWaypoint = getDistance(currentCoords, end);
-  
-  // Use heading if available, otherwise speed-based bearing calculation would be needed
-  // Geolocation heading is degrees clockwise from North.
-  const currentBearing = heading; 
+
+  // Browser heading is optional and can be NaN on some devices. Only a finite
+  // value in the documented [0, 360) range is evidence; otherwise direction
+  // remains unknown.
+  const currentBearing = typeof heading === 'number' && Number.isFinite(heading) && heading >= 0 && heading < 360
+    ? heading
+    : null;
 
   const state = determineState(
     accuracy,
