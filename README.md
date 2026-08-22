@@ -63,6 +63,8 @@ The current test route is a hardcoded ~200 m polyline around the Taipei 101 area
 
 ## Architecture
 
+![Architecture diagram](docs/architecture.svg)
+
 ```text
 Browser Geolocation ──► Deterministic engine ──► NavState + telemetry ──► Owl UI
                         (distance / bearing /          │      ▲
@@ -113,6 +115,24 @@ No Google Routes, Places, TTS, Vision, account system, destination search, or tr
 
 That is intentional. The project validated the physical navigation loop first, then added exactly one agentic capability: **remembering how a specific person understands direction, and changing future guidance because of it.**
 
+## The next body
+
+![Walk Me There Owl — hardware concept](docs/owl-hardware-concept.png)
+
+The screen is not the owl's final body. The destination is a soft, palm-sized
+owl that hangs on your phone or bag and speaks in vibration and light —
+one pulse left, one pulse right, a double pulse and a red blink when you've
+turned the wrong way. Eyes up, no screen, no map-reading skill required.
+
+This is why the navigation truth layer was deliberately kept small and
+deterministic: **it is small enough to live inside a plush owl with one motor
+and one LED.** The five navigation states map one-to-one onto haptic and light
+cues; Gemini's voice joins only when you press the owl's head to talk. The
+architecture doesn't change — the body does.
+
+> **Owl says:** I won't replace your judgment, but when you need me,
+> I'll stay with you step by step.
+
 ## Planned progression
 
 ```text
@@ -124,7 +144,9 @@ Google Routes — route truth
     ↓
 Google Places — landmark context (expands the curated registry)
     ↓
-TTS
+TTS — the owl's voice
+    ↓
+Owl charm hardware (BLE: vibration + light cues, press-head-to-talk)
     ↓
 Optional Vision
 ```
