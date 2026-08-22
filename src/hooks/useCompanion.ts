@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { NavData } from '../types/navigation';
+import type { Lang } from '../logic/stateMessages';
 
 export interface CompanionSpeech {
   main: string;
@@ -42,7 +43,7 @@ async function postTurn(body: Record<string, unknown>): Promise<Record<string, u
   }
 }
 
-export function useCompanion(navData: NavData | null) {
+export function useCompanion(navData: NavData | null, lang: Lang = 'zh') {
   const [speech, setSpeech] = useState<CompanionSpeech | null>(null);
   const [thinking, setThinking] = useState(false);
   const [memoryUpdated, setMemoryUpdated] = useState(false);
@@ -52,6 +53,8 @@ export function useCompanion(navData: NavData | null) {
   const inFlight = useRef(false);
   const recoverySince = useRef<number | null>(null);
   const stableOnRouteSince = useRef<number | null>(null);
+  const langRef = useRef<Lang>(lang);
+  langRef.current = lang;
 
   useEffect(() => {
     deviceId.current = getDeviceId();
@@ -74,6 +77,7 @@ export function useCompanion(navData: NavData | null) {
           deviceId: deviceId.current,
           event: 'recovery_needed',
           navSnapshot: navData,
+          lang: langRef.current,
         }).then((res) => {
           inFlight.current = false;
           setThinking(false);
@@ -116,6 +120,7 @@ export function useCompanion(navData: NavData | null) {
       event: 'user_message',
       episodeId: episodeId.current,
       message,
+      lang: langRef.current,
     });
     setThinking(false);
     if (res && res.speech) {

@@ -113,7 +113,7 @@ The most important gate is T3:
 
 No Google Routes, Places, TTS, Vision, account system, destination search, or travel-planning layer is integrated yet.
 
-That is intentional. The project validated the physical navigation loop first, then added exactly one agentic capability: **remembering how a specific person understands direction, and changing future guidance because of it.**
+That is intentional. The project built the physical navigation loop first, then added exactly one agentic capability: **remembering how a specific person understands direction, and changing future guidance because of it.**
 
 ## The next body
 

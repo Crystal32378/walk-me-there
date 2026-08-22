@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { validateGuidance } from './validator';
 import { clockFace, getBearing } from './geo';
 
-const LANDMARKS = [{ id: 'taipei101', name: '台北101' }];
+const LANDMARKS = [{ id: 'taipei101', name: '台北101', nameEn: 'Taipei 101' }];
 
 describe('Guidance Validator', () => {
   it('accepts clean guidance', () => {
@@ -22,6 +22,23 @@ describe('Guidance Validator', () => {
     );
     expect(v.ok).toBe(false);
     expect(v.reason).toBe('cardinal');
+  });
+
+  it('rejects English cardinal words too when the user model forbids them', () => {
+    const v = validateGuidance(
+      { main: 'Head northeast for a bit.', sub: 'Almost there.' },
+      { avoidCardinal: true },
+      LANDMARKS
+    );
+    expect(v.ok).toBe(false);
+    expect(v.reason).toBe('cardinal');
+
+    const ok = validateGuidance(
+      { main: 'Turn to your left and walk toward 台北101.', sub: "I'm with you." },
+      { avoidCardinal: true },
+      LANDMARKS
+    );
+    expect(ok.ok).toBe(true);
   });
 
   it('allows cardinal words before the user says otherwise', () => {
@@ -48,6 +65,13 @@ describe('Guidance Validator', () => {
       LANDMARKS
     );
     expect(good.ok).toBe(true);
+
+    const goodEn = validateGuidance(
+      { main: 'Walk toward Taipei 101.', sub: "It's right ahead of you." },
+      { avoidCardinal: true },
+      LANDMARKS
+    );
+    expect(goodEn.ok).toBe(true);
   });
 
   it('rejects malformed or oversized speech', () => {

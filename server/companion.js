@@ -36,7 +36,17 @@ const OWL_PERSONA = `你是「小貓頭鷹」，Walk Me There 的路上陪伴者
 3. 不要輸出任何數字。距離與時間由引擎顯示，不是你的工作。
 4. 遵守 USER_MODEL：那是這位使用者告訴我們「他怎麼理解方向」的紀錄。`;
 
-function buildGuidancePrompt(navSnapshot, userModel, landmarkFacts) {
+const LANG_RULE = {
+  zh: '輸出語言：繁體中文。',
+  en: 'Output language: English. Both "main" and "sub" must be written in natural, warm English.',
+};
+
+const CARDINAL_RULE = {
+  zh: '此使用者「分不清東西南北」。絕對禁止使用東、西、南、北等方位字，改用地標（朝著／背對）、身體相對方向（左手邊、右手邊、轉身）或時鐘方向。',
+  en: 'This user cannot tell north/south/east/west apart. NEVER use cardinal direction words (north, south, east, west). Use landmarks (toward / away from), body-relative directions (your left, your right, turn around) or clock directions instead.',
+};
+
+function buildGuidancePrompt(navSnapshot, userModel, landmarkFacts, lang) {
   const facts = {
     state: navSnapshot.state,
     離路線幾公尺: Math.round(navSnapshot.crossTrackDistance ?? 0),
@@ -47,8 +57,8 @@ function buildGuidancePrompt(navSnapshot, userModel, landmarkFacts) {
 
   const modelDesc = {
     avoidCardinal: userModel.avoidCardinal
-      ? '此使用者「分不清東西南北」。絕對禁止使用東、西、南、北等方位字，改用地標（朝著／背對）、身體相對方向（左手邊、右手邊、轉身）或時鐘方向。'
-      : '尚無限制，但方位詞請謹慎使用。',
+      ? CARDINAL_RULE[lang]
+      : '尚無限制，但方位詞請謹慎使用。/ No restriction yet, but use cardinal words sparingly.',
     orientationVocab: userModel.orientationVocab,
     notes: userModel.notes,
   };
@@ -70,14 +80,15 @@ ${JSON.stringify(landmarkFacts, null, 2)}
 USER_MODEL（這位使用者怎麼理解方向）：
 ${JSON.stringify(modelDesc, null, 2)}
 
-輸出 JSON：{"main": "一句主要指引，30字內", "sub": "一句安撫或補充，40字內"}`;
+${LANG_RULE[lang]}
+輸出 JSON：{"main": "一句主要指引，30字內/max ~15 words", "sub": "一句安撫或補充，40字內/max ~20 words"}`;
 }
 
-async function generateGuidance(navSnapshot, userModel, landmarkFacts) {
+async function generateGuidance(navSnapshot, userModel, landmarkFacts, lang) {
   const response = await withTimeout(
     ai.models.generateContent({
       model: MODEL,
-      contents: [{ role: 'user', parts: [{ text: buildGuidancePrompt(navSnapshot, userModel, landmarkFacts) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildGuidancePrompt(navSnapshot, userModel, landmarkFacts, lang) }] }],
       config: {
         systemInstruction: OWL_PERSONA,
         responseMimeType: 'application/json',
@@ -121,7 +132,7 @@ const UPDATE_USER_MODEL_TOOL = {
   },
 };
 
-async function handleUserMessage(deviceId, message, userModel) {
+async function handleUserMessage(deviceId, message, userModel, lang) {
   const contents = [
     {
       role: 'user',
@@ -132,7 +143,8 @@ async function handleUserMessage(deviceId, message, userModel) {
 目前的 USER_MODEL：${JSON.stringify(userModel)}
 
 如果這句話透露了他怎麼理解（或無法理解）方向，先呼叫 update_user_model 記住，再回覆他。
-回覆規則：一句話、30字內、溫柔、告訴他你會怎麼配合他。不要數字、不要自創地名。`,
+回覆規則：一句話、30字內（English: max ~15 words）、溫柔、告訴他你會怎麼配合他。不要數字、不要自創地名。
+${LANG_RULE[lang]}`,
         },
       ],
     },
@@ -199,8 +211,26 @@ async function handleUserMessage(deviceId, message, userModel) {
   return { replyText: replyText.trim(), memoryUpdated, appliedPatch };
 }
 
+const FIXED_TEXT = {
+  zh: {
+    memorySub: '小貓頭鷹記下來了，之後都會這樣帶你。',
+    defaultSub: '有什麼不清楚都可以問我。',
+    heardMain: '我聽到了，我會陪著你。',
+    fallbackMain: '我聽到了，先跟著我走。',
+    fallbackSub: '訊號有點忙，但我還在。',
+  },
+  en: {
+    memorySub: "The owl wrote it down — it'll guide you this way from now on.",
+    defaultSub: 'Ask me anything that feels unclear.',
+    heardMain: "I hear you — I'm right here with you.",
+    fallbackMain: 'I hear you — stay with me for now.',
+    fallbackSub: "The signal is busy, but I'm still here.",
+  },
+};
+
 export async function handleTurn(body) {
   const { deviceId, event } = body;
+  const lang = body.lang === 'en' ? 'en' : 'zh';
   if (!deviceId || typeof deviceId !== 'string') {
     return { error: 'deviceId_required', status: 400 };
   }
@@ -217,7 +247,7 @@ export async function handleTurn(body) {
     let source = 'fallback';
     let rejectedReason = null;
     try {
-      const candidate = await generateGuidance(nav, userModel, landmarkFacts);
+      const candidate = await generateGuidance(nav, userModel, landmarkFacts, lang);
       const verdict = validateGuidance(candidate, userModel, LANDMARKS);
       if (verdict.ok) {
         speech = candidate;
@@ -252,7 +282,8 @@ export async function handleTurn(body) {
       const { replyText, memoryUpdated, appliedPatch } = await handleUserMessage(
         deviceId,
         message,
-        userModel
+        userModel,
+        lang
       );
       if (body.episodeId) {
         await appendEpisodeMessage(deviceId, body.episodeId, {
@@ -263,8 +294,8 @@ export async function handleTurn(body) {
       }
       return {
         speech: {
-          main: replyText || '我聽到了，我會陪著你。',
-          sub: memoryUpdated ? '小貓頭鷹記下來了，之後都會這樣帶你。' : '有什麼不清楚都可以問我。',
+          main: replyText || FIXED_TEXT[lang].heardMain,
+          sub: memoryUpdated ? FIXED_TEXT[lang].memorySub : FIXED_TEXT[lang].defaultSub,
         },
         memoryUpdated,
         appliedPatch,
@@ -273,7 +304,7 @@ export async function handleTurn(body) {
     } catch (err) {
       console.error('user_message failed:', err.message);
       return {
-        speech: { main: '我聽到了，先跟著我走。', sub: '訊號有點忙，但我還在。' },
+        speech: { main: FIXED_TEXT[lang].fallbackMain, sub: FIXED_TEXT[lang].fallbackSub },
         memoryUpdated: false,
         source: 'fallback',
       };

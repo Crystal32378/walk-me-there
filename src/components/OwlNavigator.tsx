@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Bird, X, ChevronDown, ChevronUp, HelpCircle, Feather } from 'lucide-react';
 import type { NavData } from '../types/navigation';
-import { STATE_MESSAGES, getHumanErrorMessage } from '../logic/stateMessages';
+import { getStateMessage, getHumanErrorMessage, UI_TEXT } from '../logic/stateMessages';
+import type { Lang } from '../logic/stateMessages';
 import { DiagnosticDashboard } from './DiagnosticDashboard';
 import type { CompanionSpeech } from '../hooks/useCompanion';
 
@@ -16,28 +17,23 @@ interface Props {
   data: NavData | null;
   error: string | null;
   companion: Companion;
+  lang: Lang;
 }
 
-// Quick-tap openers for the dialogue — the answers come from the agent, not a table.
-const CONFUSED_PROMPTS = [
-  '我現在到底面向哪裡？',
-  '你說的是哪一個左轉？',
-  '是這個路口嗎？',
-  '我分不清東西南北。',
-];
-
-export const OwlNavigator: React.FC<Props> = ({ data, error, companion }) => {
+export const OwlNavigator: React.FC<Props> = ({ data, error, companion, lang }) => {
   const [showConfusedMenu, setShowConfusedMenu] = useState(false);
   const [freeText, setFreeText] = useState('');
   const [sending, setSending] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [imgError, setImgError] = useState(false);
 
+  const t = UI_TEXT[lang];
+
   const getInstructions = () => {
     // The companion's live guidance takes over the dialogue when present;
     // the engine's static state message is always the fallback.
     if (companion.speech && data && !error) {
-      const staticMsg = STATE_MESSAGES[data.state];
+      const staticMsg = getStateMessage(data.state, lang);
       return {
         main: companion.speech.main,
         sub: companion.speech.sub,
@@ -48,12 +44,12 @@ export const OwlNavigator: React.FC<Props> = ({ data, error, companion }) => {
     if (error) {
       if (data) {
         return {
-          main: '我暫時看不清楚你的位置，再等我一下。',
-          sub: '訊號有點弱，我們正在重新抓取。',
+          main: t.weakSignalMain,
+          sub: t.weakSignalSub,
           glowClass: 'glow-uncertain'
         };
       }
-      const humanErr = getHumanErrorMessage(error);
+      const humanErr = getHumanErrorMessage(error, lang);
       return {
         main: humanErr.main,
         sub: humanErr.sub,
@@ -63,13 +59,13 @@ export const OwlNavigator: React.FC<Props> = ({ data, error, companion }) => {
 
     if (!data) {
       return {
-        main: '正在尋找你的位置...',
-        sub: '小貓頭鷹正在睜開眼睛看路。',
+        main: t.acquiringMain,
+        sub: t.acquiringSub,
         glowClass: 'glow-uncertain'
       };
     }
 
-    return STATE_MESSAGES[data.state];
+    return getStateMessage(data.state, lang);
   };
 
   const { main, sub, glowClass } = getInstructions();
@@ -107,13 +103,13 @@ export const OwlNavigator: React.FC<Props> = ({ data, error, companion }) => {
       {/* Direct Companion Speech / Instruction (No Card Container) */}
       <div className="companion-dialogue">
         <h2 className="main-instruction">
-          {companion.thinking || sending ? '小貓頭鷹想了一下⋯' : main}
+          {companion.thinking || sending ? t.thinking : main}
         </h2>
         <p className="sub-instruction">{companion.thinking || sending ? '' : sub}</p>
         {companion.memoryUpdated && (
           <p className="memory-badge" aria-live="polite">
             <Feather size={14} style={{ display: 'inline', verticalAlign: 'middle' }} />
-            {' '}小貓頭鷹記住了你理解方向的方式
+            {' '}{t.memoryBadge}
           </p>
         )}
       </div>
@@ -134,14 +130,14 @@ export const OwlNavigator: React.FC<Props> = ({ data, error, companion }) => {
           <div className="modal-backdrop" onClick={() => setShowConfusedMenu(false)} />
           <div className="bottom-sheet">
             <div className="sheet-header">
-              <h3 className="sheet-title">小貓頭鷹聽你說</h3>
+              <h3 className="sheet-title">{t.sheetTitle}</h3>
               <button className="sheet-close-btn" onClick={() => setShowConfusedMenu(false)} aria-label="Close">
                 <X size={20} />
               </button>
             </div>
 
             <div className="confused-options-grid">
-              {CONFUSED_PROMPTS.map((option) => (
+              {t.confusedPrompts.map((option) => (
                 <button
                   key={option}
                   className="confused-option-card"
@@ -164,13 +160,13 @@ export const OwlNavigator: React.FC<Props> = ({ data, error, companion }) => {
                 className="owl-free-text-input"
                 type="text"
                 value={freeText}
-                placeholder="或者，直接跟牠說⋯"
+                placeholder={t.freeTextPlaceholder}
                 onChange={(e) => setFreeText(e.target.value)}
                 disabled={sending}
                 maxLength={200}
               />
               <button className="response-confirm-btn" type="submit" disabled={sending || !freeText.trim()}>
-                {sending ? '⋯' : '說'}
+                {sending ? '⋯' : t.sendButton}
               </button>
             </form>
           </div>
