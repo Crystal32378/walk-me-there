@@ -26,44 +26,65 @@ Best experienced on a phone with location permission enabled.
 
 ## What exists today
 
-The current `v0.1.5` baseline is deliberately small:
+The current `v0.1.6` build has two roles with a hard boundary between them:
 
-- React + TypeScript + Vite mobile UI
-- Browser `navigator.geolocation.watchPosition`
-- Deterministic distance, bearing, bearing-delta, and cross-track calculations
-- Five navigation states:
-  - `UNCERTAIN_GPS`
-  - `STATIONARY`
-  - `ON_ROUTE`
-  - `WRONG_DIRECTION`
-  - `OFF_ROUTE`
-- Owl companion UI that translates machine state into a single human instruction
-- Collapsible developer diagnostics for field calibration
-- 9 deterministic geometry/navigation tests
-- Cloud Run deployment
+**The navigation engine tells the truth.** Deterministic geometry (distance, bearing,
+cross-track) decides where you are, whether you turned around, and whether you are
+off the route. Five states: `UNCERTAIN_GPS`, `STATIONARY`, `ON_ROUTE`,
+`WRONG_DIRECTION`, `OFF_ROUTE`. No model is ever consulted about geography.
+
+**Gemini translates the truth into words this specific person understands — and
+remembers how.** When the engine confirms you are lost, a companion agent
+(Gemini 3.5 Flash on Vertex AI, via the Google GenAI SDK) receives the engine's
+facts and this user's profile, and phrases the way back. When you tell the owl
+「我分不清東西南北」, the agent calls its `update_user_model` tool, the fact is
+persisted to Firestore, and **every future guidance stops using cardinal
+directions** — enforced by a deterministic validator, not by prompt hope.
+
+Components:
+
+- React + TypeScript + Vite mobile UI, browser `watchPosition`
+- Deterministic navigation engine (unchanged since `v0.1.5`)
+- Companion agent service: Node + Express on Cloud Run
+  - Gemini 3.5 Flash via Vertex AI (`@google/genai`)
+  - Function calling: the model decides what to remember about the user
+  - Firestore: persistent user model + recovery episodes
+  - Deterministic validator between the model and the screen
+    (no invented numbers, no unregistered landmarks, honors `avoidCardinal`)
+- Recovery episodes are opened by the engine, and **closed only by the engine**
+  when it verifies the user is stably back on route — the model cannot certify
+  its own success
+- 16 deterministic tests (geometry, state machine, validator)
+- Simulated-walk harness (`?sim=1`) that replays a scripted GPS trace of the
+  test route — walk, turn around, recover, deviate, recover — for verification
+  and demos without standing next to Taipei 101
 
 The current test route is a hardcoded ~200 m polyline around the Taipei 101 area. It exists only to calibrate the navigation engine before real route APIs are introduced.
 
 ## Architecture
 
 ```text
-Browser Geolocation
-        ↓
-Deterministic geometry
-(distance / bearing / cross-track)
-        ↓
-Navigation state
-        ↓
-Presentation mapping
-        ↓
-Owl companion instruction
+Browser Geolocation ──► Deterministic engine ──► NavState + telemetry ──► Owl UI
+                        (distance / bearing /          │      ▲
+                         cross-track / verify)         ▼      │ validated speech
+                                              Companion agent (Cloud Run)
+                                              Gemini 3.5 Flash · Vertex AI
+                                                 │ update_user_model tool
+                                                 ▼
+                                              Firestore (user model + episodes)
 ```
 
 The important architectural rule is:
 
 > **Geographic truth must be deterministic. Language is presentation.**
+>
+> The engine knows where you are. The agent knows who you are.
 
-An LLM should never invent a route, guess whether the user is off-route, hallucinate a landmark, or independently change navigation state.
+The LLM never invents a route, never decides whether the user is off-route,
+never names a landmark outside the curated registry, and never outputs a number.
+A deterministic validator rejects any guidance that breaks these rules, and the
+UI falls back to the engine's static state messages — navigation keeps working
+even if the model is down.
 
 ## Current technical caveat
 
@@ -88,9 +109,9 @@ The most important gate is T3:
 
 ## What is deliberately not built yet
 
-No Google Routes, Places, Gemini, ADK, TTS, Vision, account system, destination search, or travel-planning layer is integrated in this baseline.
+No Google Routes, Places, TTS, Vision, account system, destination search, or travel-planning layer is integrated yet.
 
-That is intentional. The project is validating the physical navigation loop before adding platform complexity.
+That is intentional. The project validated the physical navigation loop first, then added exactly one agentic capability: **remembering how a specific person understands direction, and changing future guidance because of it.**
 
 ## Planned progression
 
@@ -101,9 +122,7 @@ Robust movement-bearing estimation (if required)
     ↓
 Google Routes — route truth
     ↓
-Google Places — landmark context
-    ↓
-Gemini — clear micro-instructions and recovery wording
+Google Places — landmark context (expands the curated registry)
     ↓
 TTS
     ↓
@@ -123,6 +142,16 @@ Production build:
 ```bash
 npm run build
 ```
+
+Companion agent server (requires Google Cloud ADC with Vertex AI + Firestore access):
+
+```bash
+cd server && npm install
+GOOGLE_CLOUD_PROJECT=walk-me-there node index.js
+# serves the built frontend from ../dist and the agent API on :8080
+```
+
+Simulated walk (no GPS needed): open the app with `?sim=1`.
 
 ## Baseline
 

@@ -1,9 +1,11 @@
 import './App.css';
 import { useNavigator } from './hooks/useNavigator';
+import { useCompanion } from './hooks/useCompanion';
 import { OwlNavigator } from './components/OwlNavigator';
 
 function App() {
   const { navData, error } = useNavigator();
+  const companion = useCompanion(navData);
 
   return (
     <div className="app-container">
@@ -13,7 +15,7 @@ function App() {
       </header>
 
       <main className="app-main">
-        <OwlNavigator data={navData} error={error} />
+        <OwlNavigator data={navData} error={error} companion={companion} />
       </main>
     </div>
   );
