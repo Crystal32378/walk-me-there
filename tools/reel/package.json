@@ -1,0 +1,9 @@
+{
+  "name": "wmt-reel",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.49.0",
+    "ffmpeg-static": "^5.2.0"
+  }
+}
