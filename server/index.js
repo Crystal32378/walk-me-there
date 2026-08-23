@@ -9,7 +9,9 @@ app.use(express.json());
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(__dirname, '..', 'dist');
 
-app.get('/healthz', (_req, res) => res.json({ ok: true, service: 'walk-me-there' }));
+// Note: /healthz is intercepted by Google Frontend on Cloud Run (reserved
+// path, returns GFE 404 before reaching the container) — hence /api/health.
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'walk-me-there' }));
 
 app.post('/api/companion/turn', async (req, res) => {
   try {

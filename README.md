@@ -53,8 +53,10 @@ Components:
     (no invented numbers, no unregistered landmarks, honors `avoidCardinal`)
 - Recovery episodes are opened by the engine, and **closed only by the engine**
   when it verifies the user is stably back on route — the model cannot certify
-  its own success
-- 16 deterministic tests (geometry, state machine, validator)
+  its own success. The server also **recomputes the navigation state from raw
+  observations** before waking the agent; a client-claimed state is never trusted
+- Deterministic test suite covering geometry, the state machine (frontend and
+  server), and the validator
 - Simulated-walk harness (`?sim=1`) that replays a scripted GPS trace of the
   test route — walk, turn around, recover, deviate, recover — for verification
   and demos without standing next to Taipei 101
@@ -83,10 +85,11 @@ The important architectural rule is:
 > The engine knows where you are. The agent knows who you are.
 
 The LLM never invents a route, never decides whether the user is off-route,
-never names a landmark outside the curated registry, and never outputs a number.
-A deterministic validator rejects any guidance that breaks these rules, and the
-UI falls back to the engine's static state messages — navigation keeps working
-even if the model is down.
+and never outputs a number. A deterministic validator rejects any guidance that
+breaks these rules — including references to places outside the curated
+registry (proper-noun and POI/transit-name heuristics) — and the UI falls back
+to the engine's static state messages: navigation keeps working even if the
+model is down.
 
 ## Current technical caveat
 

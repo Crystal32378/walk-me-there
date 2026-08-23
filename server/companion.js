@@ -5,6 +5,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { LANDMARKS, buildLandmarkFacts } from './landmarks.js';
 import { validateGuidance } from './validator.js';
+import { assessNavigation } from './engine.js';
 import {
   getUserModel,
   patchUserModel,
@@ -236,10 +237,17 @@ export async function handleTurn(body) {
   }
 
   if (event === 'recovery_needed') {
-    const nav = body.navSnapshot;
-    if (!nav || !['WRONG_DIRECTION', 'OFF_ROUTE'].includes(nav.state)) {
-      return { error: 'invalid_nav_state', status: 400 };
+    // Never trust the client's claimed state: recompute geographic truth
+    // server-side from the raw observations. The agent only wakes when the
+    // server's own deterministic engine agrees recovery is needed.
+    const engine = assessNavigation(body.navSnapshot);
+    if (!engine) {
+      return { error: 'invalid_nav_snapshot', status: 400 };
     }
+    if (!['WRONG_DIRECTION', 'OFF_ROUTE'].includes(engine.state)) {
+      return { error: 'engine_disagrees', status: 409 };
+    }
+    const nav = { ...engine, currentCoords: body.navSnapshot.currentCoords };
     const userModel = await getUserModel(deviceId);
     const landmarkFacts = buildLandmarkFacts(nav.currentCoords, nav.bearing ?? null);
 

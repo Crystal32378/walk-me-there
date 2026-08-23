@@ -74,6 +74,55 @@ describe('Guidance Validator', () => {
     expect(goodEn.ok).toBe(true);
   });
 
+  it('rejects references to places outside the registry', () => {
+    const en = validateGuidance(
+      { main: 'Walk toward Taipei Station.', sub: 'Almost there.' },
+      { avoidCardinal: false },
+      LANDMARKS
+    );
+    expect(en.ok).toBe(false);
+    expect(en.reason).toBe('unregistered_place');
+
+    const zh = validateGuidance(
+      { main: '朝台北車站的方向走。', sub: '快到了。' },
+      { avoidCardinal: false },
+      LANDMARKS
+    );
+    expect(zh.ok).toBe(false);
+    expect(zh.reason).toBe('unregistered_place');
+
+    const transit = validateGuidance(
+      { main: '往捷運站走。', sub: '我陪你。' },
+      { avoidCardinal: false },
+      LANDMARKS
+    );
+    expect(transit.ok).toBe(false);
+    expect(transit.reason).toBe('unregistered_place');
+  });
+
+  it('still allows registry landmarks, generic environment words and emphasis caps', () => {
+    const registry = validateGuidance(
+      { main: 'Walk toward Taipei 101, please.', sub: "It's right ahead of you." },
+      { avoidCardinal: false },
+      LANDMARKS
+    );
+    expect(registry.ok).toBe(true);
+
+    const generic = validateGuidance(
+      { main: '穿過公園，朝台北101走。', sub: '沿著這條路，我陪你。' },
+      { avoidCardinal: false },
+      LANDMARKS
+    );
+    expect(generic.ok).toBe(true);
+
+    const emphasis = validateGuidance(
+      { main: 'Turn to your LEFT now.', sub: "Don't worry, I am right here." },
+      { avoidCardinal: true },
+      LANDMARKS
+    );
+    expect(emphasis.ok).toBe(true);
+  });
+
   it('rejects malformed or oversized speech', () => {
     expect(validateGuidance(null, {}, LANDMARKS).ok).toBe(false);
     expect(validateGuidance({ main: 'x'.repeat(61), sub: '' }, {}, LANDMARKS).ok).toBe(false);
