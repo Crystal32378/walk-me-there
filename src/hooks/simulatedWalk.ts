@@ -32,6 +32,13 @@ export function isSimMode(): boolean {
   return new URLSearchParams(window.location.search).get('sim') === '1';
 }
 
+// Disclosure-only flag: shows the replay banner without enabling the built-in
+// trace — for recordings that inject GPS externally (e.g. CDP geolocation).
+export function showReplayBanner(): boolean {
+  const p = new URLSearchParams(window.location.search);
+  return p.get('sim') === '1' || p.get('replay') === '1';
+}
+
 export function startSimulatedWalk(
   onPosition: (position: GeolocationPosition) => void
 ): () => void {

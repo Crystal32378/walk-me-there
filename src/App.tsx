@@ -3,7 +3,7 @@ import './App.css';
 import { useNavigator } from './hooks/useNavigator';
 import { useCompanion } from './hooks/useCompanion';
 import { OwlNavigator } from './components/OwlNavigator';
-import { isSimMode } from './hooks/simulatedWalk';
+import { showReplayBanner } from './hooks/simulatedWalk';
 import { UI_TEXT } from './logic/stateMessages';
 import type { Lang } from './logic/stateMessages';
 
@@ -24,7 +24,7 @@ function App() {
 
   return (
     <div className="app-container">
-      {isSimMode() && (
+      {showReplayBanner() && (
         <div className="sim-banner">
           Reproducible GPS replay — Gemini, Cloud Run and Firestore are live.
         </div>
