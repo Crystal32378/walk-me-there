@@ -38,6 +38,27 @@ function hasUnregisteredPlaceReference(stripped) {
 const CLOCK_EN_RE = /(?<!\d)(1[0-2]|[1-9])(?!\d)[\s-]*o[’'`]?clock/gi;
 const CLOCK_ZH_RE = /(?<!\d)(1[0-2]|[1-9])(?!\d)\s*點鐘/g;
 
+// Dialogue replies come back as free text, but the model occasionally
+// mimics the guidance path and emits raw JSON. Never show raw JSON to the
+// user: parse it if possible, drop it (→ static fallback) if not.
+export function sanitizeReply(raw) {
+  if (typeof raw !== 'string') return null;
+  let text = raw.trim();
+  text = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  if (text.startsWith('{')) {
+    try {
+      const obj = JSON.parse(text);
+      const main = typeof obj.main === 'string' ? obj.main : typeof obj.text === 'string' ? obj.text : null;
+      if (!main || !main.trim()) return null;
+      return { main: main.trim(), sub: typeof obj.sub === 'string' ? obj.sub.trim() : '' };
+    } catch {
+      return null;
+    }
+  }
+  if (!text) return null;
+  return { main: text, sub: '' };
+}
+
 export function validateGuidance(speech, userModel, landmarks) {
   if (!speech || typeof speech.main !== 'string' || typeof speech.sub !== 'string') {
     return { ok: false, reason: 'shape' };

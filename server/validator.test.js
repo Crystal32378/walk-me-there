@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateGuidance } from './validator';
+import { validateGuidance, sanitizeReply } from './validator';
 import { clockFace, getBearing } from './geo';
 
 const LANDMARKS = [{ id: 'taipei101', name: '台北101', nameEn: 'Taipei 101' }];
@@ -175,6 +175,30 @@ describe('Guidance Validator', () => {
   it('rejects malformed or oversized speech', () => {
     expect(validateGuidance(null, {}, LANDMARKS).ok).toBe(false);
     expect(validateGuidance({ main: 'x'.repeat(61), sub: '' }, {}, LANDMARKS).ok).toBe(false);
+  });
+});
+
+describe('Dialogue reply sanitizer — raw JSON never reaches the screen', () => {
+  it('passes plain text through', () => {
+    expect(sanitizeReply('別擔心，我會用左右跟你說。')).toEqual({
+      main: '別擔心，我會用左右跟你說。',
+      sub: '',
+    });
+  });
+
+  it('parses JSON-shaped replies instead of showing them raw', () => {
+    const r = sanitizeReply('{"main": "Got it, my friend.", "sub": "I will remember."}');
+    expect(r).toEqual({ main: 'Got it, my friend.', sub: 'I will remember.' });
+
+    const fenced = sanitizeReply('```json\n{"main": "好的，我記住了。"}\n```');
+    expect(fenced?.main).toBe('好的，我記住了。');
+  });
+
+  it('drops unparseable JSON-looking output entirely (static fallback takes over)', () => {
+    expect(sanitizeReply('{"main": "broken')).toBe(null);
+    expect(sanitizeReply('{}')).toBe(null);
+    expect(sanitizeReply('')).toBe(null);
+    expect(sanitizeReply(undefined)).toBe(null);
   });
 });
 

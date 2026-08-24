@@ -4,7 +4,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { LANDMARKS, buildLandmarkFacts } from './landmarks.js';
-import { validateGuidance } from './validator.js';
+import { validateGuidance, sanitizeReply } from './validator.js';
 import { assessNavigation } from './engine.js';
 import {
   getUserModel,
@@ -329,9 +329,11 @@ export async function handleTurn(body) {
           memoryUpdated,
         });
       }
+      // Never surface raw JSON on the owl's lips.
+      const clean = sanitizeReply(replyText);
       return {
         speech: {
-          main: replyText || FIXED_TEXT[lang].heardMain,
+          main: clean?.main || FIXED_TEXT[lang].heardMain,
           sub: memoryUpdated ? FIXED_TEXT[lang].memorySub : FIXED_TEXT[lang].defaultSub,
         },
         memoryUpdated,
