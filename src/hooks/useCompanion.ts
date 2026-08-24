@@ -12,7 +12,7 @@ export interface CompanionSpeech {
 // and only a stable return to ON_ROUTE closes the episode.
 const RECOVERY_DEBOUNCE_MS = 2500;
 const RECOVERED_STABLE_MS = 5000;
-const TURN_TIMEOUT_MS = 15000;
+const TURN_TIMEOUT_MS = 24000;
 
 function getDeviceId(): string {
   const KEY = 'wmt-device-id';
@@ -55,6 +55,8 @@ export function useCompanion(navData: NavData | null, lang: Lang = 'zh') {
   const stableOnRouteSince = useRef<number | null>(null);
   const langRef = useRef<Lang>(lang);
   langRef.current = lang;
+  const navDataRef = useRef<NavData | null>(null);
+  navDataRef.current = navData;
 
   useEffect(() => {
     deviceId.current = getDeviceId();
@@ -121,6 +123,9 @@ export function useCompanion(navData: NavData | null, lang: Lang = 'zh') {
       episodeId: episodeId.current,
       message,
       lang: langRef.current,
+      // Raw observations — the server recomputes engine facts from these so
+      // geographic questions get truthful, engine-grounded answers.
+      navSnapshot: navDataRef.current ?? undefined,
     });
     setThinking(false);
     if (res && res.speech) {

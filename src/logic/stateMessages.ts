@@ -111,48 +111,56 @@ export function getHumanErrorMessage(rawError: string, lang: Lang): { main: stri
 
 // Non-state UI strings that the owl surface needs in both languages.
 export const UI_TEXT: Record<Lang, {
+  brandSubtitle: string;
   acquiringMain: string;
   acquiringSub: string;
   weakSignalMain: string;
   weakSignalSub: string;
   thinking: string;
   memoryBadge: string;
+  confusedButton: string;
   sheetTitle: string;
   freeTextPlaceholder: string;
   sendButton: string;
   confusedPrompts: string[];
 }> = {
   zh: {
+    brandSubtitle: '牠知道路，但不嫌你不知道。',
     acquiringMain: '正在尋找你的位置...',
     acquiringSub: '小貓頭鷹正在睜開眼睛看路。',
     weakSignalMain: '我暫時看不清楚你的位置，再等我一下。',
     weakSignalSub: '訊號有點弱，我們正在重新抓取。',
     thinking: '小貓頭鷹想了一下⋯',
     memoryBadge: '小貓頭鷹記住了你理解方向的方式',
+    confusedButton: '我有點慌',
     sheetTitle: '小貓頭鷹聽你說',
     freeTextPlaceholder: '或者，直接跟牠說⋯',
     sendButton: '說',
+    // Every prompt must be answerable with engine facts or by teaching —
+    // no questions the companion can't truthfully answer.
     confusedPrompts: [
       '我現在到底面向哪裡？',
-      '你說的是哪一個左轉？',
-      '是這個路口嗎？',
+      '現在該往哪邊走？',
+      '我是不是走錯了？',
       '我分不清東西南北。'
     ]
   },
   en: {
+    brandSubtitle: 'Your little owl knows the way.',
     acquiringMain: 'Finding your position...',
     acquiringSub: 'The little owl is opening its eyes.',
     weakSignalMain: "I can't quite see where you are — hold on.",
     weakSignalSub: "The signal is a little weak; I'm reacquiring it.",
     thinking: 'The owl is thinking…',
     memoryBadge: 'The owl remembered how you understand direction',
+    confusedButton: "I'm confused",
     sheetTitle: 'Tell the owl',
     freeTextPlaceholder: 'Or just tell it…',
     sendButton: 'Say',
     confusedPrompts: [
       'Which way am I actually facing?',
-      'Which left turn do you mean?',
-      'Is this the intersection?',
+      'Which way should I go now?',
+      'Did I go the wrong way?',
       "I can't tell east from west."
     ]
   }

@@ -4,6 +4,7 @@ import { useNavigator } from './hooks/useNavigator';
 import { useCompanion } from './hooks/useCompanion';
 import { OwlNavigator } from './components/OwlNavigator';
 import { isSimMode } from './hooks/simulatedWalk';
+import { UI_TEXT } from './logic/stateMessages';
 import type { Lang } from './logic/stateMessages';
 
 function loadLang(): Lang {
@@ -31,7 +32,7 @@ function App() {
 
       <header className="app-header">
         <h1 className="brand-title">Walk Me There</h1>
-        <p className="brand-subtitle">Your little owl knows the way.</p>
+        <p className="brand-subtitle">{UI_TEXT[lang].brandSubtitle}</p>
         <button
           className="lang-toggle-btn"
           onClick={toggleLang}

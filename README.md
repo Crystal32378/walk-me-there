@@ -26,7 +26,7 @@ Best experienced on a phone with location permission enabled.
 
 ## What exists today
 
-The current `v0.1.6` build has two roles with a hard boundary between them:
+The current build has two roles with a hard boundary between them:
 
 **The navigation engine tells the truth.** Deterministic geometry (distance, bearing,
 cross-track) decides where you are, whether you turned around, and whether you are

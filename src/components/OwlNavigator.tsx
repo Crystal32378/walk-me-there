@@ -121,7 +121,7 @@ export const OwlNavigator: React.FC<Props> = ({ data, error, companion, lang }) 
         aria-label="I am confused"
       >
         <HelpCircle size={20} className="mr-2" />
-        <span>I'm confused</span>
+        <span>{t.confusedButton}</span>
       </button>
 
       {/* Confused Modal / Bottom Sheet — a real dialogue with the companion */}

@@ -32,6 +32,12 @@ function hasUnregisteredPlaceReference(stripped) {
   return false;
 }
 
+// Clock-face directions (1–12 only) are legal direction language — the engine
+// computes them and provides them as facts. Anything else with a digit
+// (distances, times, house numbers) stays banned.
+const CLOCK_EN_RE = /(?<!\d)(1[0-2]|[1-9])(?!\d)[\s-]*o[’'`]?clock/gi;
+const CLOCK_ZH_RE = /(?<!\d)(1[0-2]|[1-9])(?!\d)\s*點鐘/g;
+
 export function validateGuidance(speech, userModel, landmarks) {
   if (!speech || typeof speech.main !== 'string' || typeof speech.sub !== 'string') {
     return { ok: false, reason: 'shape' };
@@ -48,7 +54,11 @@ export function validateGuidance(speech, userModel, landmarks) {
     }
   }
 
-  // The model must not invent numbers — distances and times come from the engine.
+  // Legal clock-direction expressions are exempt from the digit ban.
+  stripped = stripped.replace(CLOCK_EN_RE, '').replace(CLOCK_ZH_RE, '');
+
+  // The model must not invent any other numbers — distances and times come
+  // from the engine.
   if (/[0-9０-９]/.test(stripped)) {
     return { ok: false, reason: 'digits' };
   }

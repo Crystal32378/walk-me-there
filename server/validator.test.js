@@ -123,6 +123,55 @@ describe('Guidance Validator', () => {
     expect(emphasis.ok).toBe(true);
   });
 
+  it('allows legal clock-direction expressions (1–12) in both languages', () => {
+    const en = validateGuidance(
+      { main: 'Taipei 101 is at your 9 o’clock — walk toward it.', sub: "I'm with you." },
+      { avoidCardinal: true, orientationVocab: 'clock' },
+      LANDMARKS
+    );
+    expect(en.ok).toBe(true);
+
+    const zh = validateGuidance(
+      { main: '往你的9點鐘方向走。', sub: '台北101就在那邊。' },
+      { avoidCardinal: true, orientationVocab: 'clock' },
+      LANDMARKS
+    );
+    expect(zh.ok).toBe(true);
+
+    const zhWordNumeral = validateGuidance(
+      { main: '朝三點鐘方向慢慢走。', sub: '我陪你。' },
+      { avoidCardinal: true },
+      LANDMARKS
+    );
+    expect(zhWordNumeral.ok).toBe(true);
+  });
+
+  it('still rejects non-clock numbers and out-of-range clock values', () => {
+    const distance = validateGuidance(
+      { main: 'Walk 50 meters toward your 9 o’clock.', sub: 'Almost.' },
+      { avoidCardinal: false },
+      LANDMARKS
+    );
+    expect(distance.ok).toBe(false);
+    expect(distance.reason).toBe('digits');
+
+    const badClock = validateGuidance(
+      { main: '往你的13點鐘方向走。', sub: '快到了。' },
+      { avoidCardinal: false },
+      LANDMARKS
+    );
+    expect(badClock.ok).toBe(false);
+    expect(badClock.reason).toBe('digits');
+
+    const time = validateGuidance(
+      { main: '再走5分鐘就到了。', sub: '加油。' },
+      { avoidCardinal: false },
+      LANDMARKS
+    );
+    expect(time.ok).toBe(false);
+    expect(time.reason).toBe('digits');
+  });
+
   it('rejects malformed or oversized speech', () => {
     expect(validateGuidance(null, {}, LANDMARKS).ok).toBe(false);
     expect(validateGuidance({ main: 'x'.repeat(61), sub: '' }, {}, LANDMARKS).ok).toBe(false);

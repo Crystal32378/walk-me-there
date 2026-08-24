@@ -17,7 +17,7 @@ import {
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || 'walk-me-there';
 const LOCATION = process.env.VERTEX_LOCATION || 'global';
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-const GEMINI_TIMEOUT_MS = 12000;
+const GEMINI_TIMEOUT_MS = 20000;
 
 const ai = new GoogleGenAI({ vertexai: true, project: PROJECT, location: LOCATION });
 
@@ -60,7 +60,10 @@ function buildGuidancePrompt(navSnapshot, userModel, landmarkFacts, lang) {
     avoidCardinal: userModel.avoidCardinal
       ? CARDINAL_RULE[lang]
       : '尚無限制，但方位詞請謹慎使用。/ No restriction yet, but use cardinal words sparingly.',
-    orientationVocab: userModel.orientationVocab,
+    orientationVocab:
+      userModel.orientationVocab === 'clock'
+        ? 'clock — 此使用者最容易理解時鐘方向。優先用「N點鐘方向」(1-12)表達；clock 值已由引擎算好，放在 LANDMARKS 的 clock 欄位，只能用那個值。'
+        : userModel.orientationVocab,
     notes: userModel.notes,
   };
 
@@ -133,7 +136,15 @@ const UPDATE_USER_MODEL_TOOL = {
   },
 };
 
-async function handleUserMessage(deviceId, message, userModel, lang) {
+async function handleUserMessage(deviceId, message, userModel, lang, engineFacts) {
+  const factsBlock = engineFacts
+    ? `
+目前引擎事實（deterministic，可用來回答方位問題）：
+${JSON.stringify(engineFacts)}
+規則：方位答案只能來自上面的事實。若 bearing 是 null，誠實告訴他往前走幾步你才能抓到面向，不要猜。`
+    : `
+（目前沒有導航事實可用——關於「我面向哪」「該往哪走」這類問題，誠實說你需要他動起來或等訊號，不要編造方位。）`;
+
   const contents = [
     {
       role: 'user',
@@ -142,9 +153,10 @@ async function handleUserMessage(deviceId, message, userModel, lang) {
           text: `使用者在導航途中對你說：「${message}」
 
 目前的 USER_MODEL：${JSON.stringify(userModel)}
+${factsBlock}
 
 如果這句話透露了他怎麼理解（或無法理解）方向，先呼叫 update_user_model 記住，再回覆他。
-回覆規則：一句話、30字內（English: max ~15 words）、溫柔、告訴他你會怎麼配合他。不要數字、不要自創地名。
+回覆規則：一到兩句、40字內（English: max ~20 words）、溫柔。可用時鐘方向（如「9點鐘方向」），除此之外不要數字、不要自創地名。
 ${LANG_RULE[lang]}`,
         },
       ],
@@ -286,12 +298,29 @@ export async function handleTurn(body) {
     if (!message) return { error: 'message_required', status: 400 };
 
     const userModel = await getUserModel(deviceId);
+
+    // If the client sent raw observations, recompute engine facts server-side
+    // so geographic questions ("which way am I facing?") get truthful answers.
+    let engineFacts = null;
+    const engine = body.navSnapshot ? assessNavigation(body.navSnapshot) : null;
+    if (engine) {
+      engineFacts = {
+        state: engine.state,
+        使用者面向角度: engine.bearing !== null ? Math.round(engine.bearing) : null,
+        正確方向角度: Math.round(engine.expectedBearing),
+        與正確方向的夾角: engine.bearingDelta !== null ? Math.round(engine.bearingDelta) : null,
+        離路線公尺: Math.round(engine.crossTrackDistance),
+        landmarks: buildLandmarkFacts(body.navSnapshot.currentCoords, engine.bearing),
+      };
+    }
+
     try {
       const { replyText, memoryUpdated, appliedPatch } = await handleUserMessage(
         deviceId,
         message,
         userModel,
-        lang
+        lang,
+        engineFacts
       );
       if (body.episodeId) {
         await appendEpisodeMessage(deviceId, body.episodeId, {
