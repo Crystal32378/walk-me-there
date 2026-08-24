@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { assessNavigation } from './engine';
+import { assessNavigation, describeDeviation } from './engine';
+
+describe('Deviation is categorized before the model ever sees it', () => {
+  it('maps meters to vocabulary buckets, no raw numbers', () => {
+    for (const [m, zh] of [
+      [21, '剛偏出路線一點點'],
+      [40, '偏了一小段路'],
+      [78, '偏得比較遠，但完全找得回來'],
+    ]) {
+      const d = describeDeviation(m);
+      expect(d.zh).toBe(zh);
+      expect(`${d.zh}${d.en}`).not.toMatch(/[0-9]/);
+    }
+  });
+});
 
 // The server engine must agree with the frontend engine
 // (src/logic/navigator.ts) on every state decision.

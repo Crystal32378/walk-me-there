@@ -174,7 +174,7 @@ describe('Guidance Validator', () => {
 
   it('rejects malformed or oversized speech', () => {
     expect(validateGuidance(null, {}, LANDMARKS).ok).toBe(false);
-    expect(validateGuidance({ main: 'x'.repeat(61), sub: '' }, {}, LANDMARKS).ok).toBe(false);
+    expect(validateGuidance({ main: 'x'.repeat(101), sub: '' }, {}, LANDMARKS).ok).toBe(false);
   });
 });
 

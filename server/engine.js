@@ -36,6 +36,16 @@ export function getBearingDelta(b1, b2) {
   return delta;
 }
 
+// Translate the numeric deviation into the vocabulary the language layer is
+// allowed to use. The model never sees the raw meters, so it can't leak them
+// ("don't think of an elephant" — observed at ~78m: Gemini echoed "70 meters"
+// and got validator-rejected). The validator's digit ban stays unchanged.
+export function describeDeviation(meters) {
+  if (meters <= 25) return { zh: '剛偏出路線一點點', en: 'just barely off the route' };
+  if (meters <= 55) return { zh: '偏了一小段路', en: 'a short way off the route' };
+  return { zh: '偏得比較遠，但完全找得回來', en: 'well off the route, but fully recoverable' };
+}
+
 // Mirrors determineState in src/logic/navigator.ts.
 export function assessNavigation(raw, polyline = TEST_POLYLINE, config = NAV_CONFIG) {
   const coords = raw?.currentCoords;

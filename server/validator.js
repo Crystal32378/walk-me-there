@@ -63,7 +63,9 @@ export function validateGuidance(speech, userModel, landmarks) {
   if (!speech || typeof speech.main !== 'string' || typeof speech.sub !== 'string') {
     return { ok: false, reason: 'shape' };
   }
-  if (speech.main.length === 0 || speech.main.length > 60 || speech.sub.length > 80) {
+  // Shape guard, not a style enforcer: generous enough for English sentences
+  // (zh brevity is enforced by the prompt's 30-character instruction).
+  if (speech.main.length === 0 || speech.main.length > 100 || speech.sub.length > 120) {
     return { ok: false, reason: 'length' };
   }
 

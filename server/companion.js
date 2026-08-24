@@ -5,7 +5,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { LANDMARKS, buildLandmarkFacts } from './landmarks.js';
 import { validateGuidance, sanitizeReply } from './validator.js';
-import { assessNavigation } from './engine.js';
+import { assessNavigation, describeDeviation } from './engine.js';
 import {
   getUserModel,
   patchUserModel,
@@ -50,7 +50,8 @@ const CARDINAL_RULE = {
 function buildGuidancePrompt(navSnapshot, userModel, landmarkFacts, lang) {
   const facts = {
     state: navSnapshot.state,
-    離路線幾公尺: Math.round(navSnapshot.crossTrackDistance ?? 0),
+    // Deviation is deliberately categorical — raw meters never reach the model.
+    偏離程度: describeDeviation(navSnapshot.crossTrackDistance ?? 0),
     使用者面向與正確方向的夾角度數: navSnapshot.bearingDelta != null ? Math.round(navSnapshot.bearingDelta) : null,
     使用者目前面向角度: navSnapshot.bearing != null ? Math.round(navSnapshot.bearing) : null,
     正確方向角度: navSnapshot.expectedBearing != null ? Math.round(navSnapshot.expectedBearing) : null,
@@ -309,7 +310,7 @@ export async function handleTurn(body) {
         使用者面向角度: engine.bearing !== null ? Math.round(engine.bearing) : null,
         正確方向角度: Math.round(engine.expectedBearing),
         與正確方向的夾角: engine.bearingDelta !== null ? Math.round(engine.bearingDelta) : null,
-        離路線公尺: Math.round(engine.crossTrackDistance),
+        偏離程度: describeDeviation(engine.crossTrackDistance),
         landmarks: buildLandmarkFacts(body.navSnapshot.currentCoords, engine.bearing),
       };
     }
