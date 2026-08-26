@@ -499,11 +499,20 @@
   line-height: 1.35;
 }
 
-.lang-toggle-btn {
+/* The two presentation switches share one fixed anchor so neither has to
+   guess the other's width. */
+.header-toggles {
   position: fixed;
   top: 0.6rem;
   right: 0.75rem;
   z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.lang-toggle-btn,
+.voice-toggle-btn {
   background: #1e293b;
   border: 1px solid #334155;
   color: #cbd5e1;
@@ -514,7 +523,18 @@
   cursor: pointer;
 }
 
-.lang-toggle-btn:active {
+.lang-toggle-btn:active,
+.voice-toggle-btn:active {
   border-color: #f59e0b;
   color: #fbbf24;
+}
+
+.voice-toggle-btn {
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.3rem 0.6rem;
+}
+
+.voice-toggle-btn.is-on {
+  border-color: #f59e0b;
 }

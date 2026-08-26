@@ -6,6 +6,7 @@ import { GoogleGenAI } from '@google/genai';
 import { LANDMARKS, buildLandmarkFacts } from './landmarks.js';
 import { validateGuidance, sanitizeReply } from './validator.js';
 import { assessNavigation, describeDeviation } from './engine.js';
+import { synthesizeSpeech } from './voice.js';
 import {
   getUserModel,
   patchUserModel,
@@ -242,6 +243,20 @@ const FIXED_TEXT = {
   },
 };
 
+// Presentation layer, strictly downstream of the validator. It is only ever
+// called with text that already passed the gate and is already on its way to
+// the screen, and it can only ever add audio - never change or withhold the
+// words. Any failure degrades to text-only.
+async function voiceFor(speech, lang, wanted) {
+  if (wanted !== true || !speech) return null;
+  try {
+    return await synthesizeSpeech(speech, lang);
+  } catch (err) {
+    console.warn('voice synthesis failed:', err.message);
+    return null;
+  }
+}
+
 export async function handleTurn(body) {
   const { deviceId, event } = body;
   const lang = body.lang === 'en' ? 'en' : 'zh';
@@ -291,7 +306,11 @@ export async function handleTurn(body) {
       userModelAtStart: userModel,
     });
 
-    return { speech, source, episodeId, userModel };
+    // Only gemini-sourced speech reaches here with a value: a rejected or
+    // failed generation leaves `speech` null and nothing is spoken.
+    const audio = await voiceFor(speech, lang, body.voice);
+
+    return { speech, source, episodeId, userModel, audio };
   }
 
   if (event === 'user_message') {
@@ -332,11 +351,13 @@ export async function handleTurn(body) {
       }
       // Never surface raw JSON on the owl's lips.
       const clean = sanitizeReply(replyText);
+      const speech = {
+        main: clean?.main || FIXED_TEXT[lang].heardMain,
+        sub: memoryUpdated ? FIXED_TEXT[lang].memorySub : FIXED_TEXT[lang].defaultSub,
+      };
       return {
-        speech: {
-          main: clean?.main || FIXED_TEXT[lang].heardMain,
-          sub: memoryUpdated ? FIXED_TEXT[lang].memorySub : FIXED_TEXT[lang].defaultSub,
-        },
+        speech,
+        audio: await voiceFor(speech, lang, body.voice),
         memoryUpdated,
         appliedPatch,
         source: 'gemini',
@@ -345,6 +366,7 @@ export async function handleTurn(body) {
       console.error('user_message failed:', err.message);
       return {
         speech: { main: FIXED_TEXT[lang].fallbackMain, sub: FIXED_TEXT[lang].fallbackSub },
+        audio: null,
         memoryUpdated: false,
         source: 'fallback',
       };
