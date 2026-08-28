@@ -41,6 +41,13 @@ facts and this user's profile, and phrases the way back. When you tell the owl
 persisted to Firestore, and **every future guidance stops using cardinal
 directions** — enforced by a deterministic validator, not by prompt hope.
 
+**The owl can say it out loud, without being allowed to rephrase it.** Guidance
+that passes the validator can be spoken by a runtime voice layer (Gemini TTS,
+`Puck`, on Vertex AI). It sits strictly *after* the validator and reads the
+approved text verbatim: the words in your ear are the words on the screen. It is
+off by default behind a 🔊 toggle, and it is never load-bearing — if synthesis
+fails or times out, the owl simply stays quiet and the text guides you as usual.
+
 Components:
 
 - React + TypeScript + Vite mobile UI, browser `watchPosition`
@@ -51,12 +58,21 @@ Components:
   - Firestore: persistent user model + recovery episodes
   - Deterministic validator between the model and the screen
     (no invented numbers, no unregistered landmarks, honors `avoidCardinal`)
+  - Runtime voice layer: Gemini TTS (`Puck`) — presentation only, downstream of
+    the validator, speaks approved text verbatim, cached per utterance
 - Recovery episodes are opened by the engine, and **closed only by the engine**
   when it verifies the user is stably back on route — the model cannot certify
   its own success. The server also **recomputes the navigation state from raw
   observations** before waking the agent; a client-claimed state is never trusted
-- Deterministic test suite covering geometry, the state machine (frontend and
-  server), and the validator
+- 🔊 voice toggle in the UI: **off by default**, remembered per device. The tap
+  that enables it is also the browser gesture that unlocks audio playback
+- Audio that arrives after the walker has already left the state it was
+  generated for is **discarded, not played** — a late instruction is worse than
+  silence. TTS failure or timeout degrades silently to text-only
+- 60 automated tests: the original 31 navigation/validator baseline (geometry,
+  the state machine on frontend and server, the validator) plus 29 voice tests
+  (verbatim-text contract, WAV framing, cache-key stability, and the ordering
+  guarantee that nothing is ever synthesized before the validator approves it)
 - Simulated-walk harness (`?sim=1`) that replays a scripted GPS trace of the
   test route — walk, turn around, recover, deviate, recover — for verification
   and demos without standing next to Taipei 101
@@ -91,6 +107,25 @@ registry (proper-noun and POI/transit-name heuristics) — and the UI falls back
 to the engine's static state messages: navigation keeps working even if the
 model is down.
 
+Voice lives entirely on the presentation side of that boundary. It is the last
+step in the chain, never a participant in it: it cannot approve, alter, delay or
+withhold a single word, and everything still works with the sound off.
+
+## Repo map
+
+```text
+src/logic/             Deterministic navigation engine — the frozen core
+src/hooks/             useNavigator (GPS), useCompanion (agent + voice
+                       playback), simulatedWalk (the ?sim=1 scripted trace)
+src/components/        OwlNavigator (the owl UI), DiagnosticDashboard
+server/engine.js       Server-side recomputation of navigation truth
+server/companion.js    Gemini agent turn handler (guidance + dialogue)
+server/validator.js    The gate: rejects guidance that breaks the rules
+server/voice.js        Gemini TTS — strictly downstream of the validator
+*.test.js / *.test.ts  Tests, alongside the file they cover
+docs/architecture.svg  Architecture diagram
+```
+
 ## Current technical caveat
 
 `WRONG_DIRECTION` currently relies on the browser/device `GeolocationCoordinates.heading` value when it is available.
@@ -114,9 +149,9 @@ The most important gate is T3:
 
 ## What is deliberately not built yet
 
-No Google Routes, Places, TTS, Vision, account system, destination search, or travel-planning layer is integrated yet.
+No Google Routes, Places, Vision, account system, destination search, or travel-planning layer is integrated yet.
 
-That is intentional. The project built the physical navigation loop first, then added exactly one agentic capability: **remembering how a specific person understands direction, and changing future guidance because of it.**
+That is intentional. The project built the physical navigation loop first, then added exactly one agentic capability: **remembering how a specific person understands direction, and changing future guidance because of it.** The runtime voice that shipped after it is deliberately *not* a second one — it speaks the same validated sentence, and decides nothing.
 
 ## The next body
 
@@ -139,15 +174,15 @@ architecture doesn't change — the body does.
 ## Planned progression
 
 ```text
-Field calibration
+✅ Runtime voice — Gemini TTS, shipped and live
+    ↓
+Field calibration  ← current gate (T1–T4 above)
     ↓
 Robust movement-bearing estimation (if required)
     ↓
 Google Routes — route truth
     ↓
 Google Places — landmark context (expands the curated registry)
-    ↓
-TTS — the owl's voice
     ↓
 Owl charm hardware (BLE: vibration + light cues, press-head-to-talk)
     ↓
