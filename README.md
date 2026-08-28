@@ -118,11 +118,12 @@ src/logic/             Deterministic navigation engine — the frozen core
 src/hooks/             useNavigator (GPS), useCompanion (agent + voice
                        playback), simulatedWalk (the ?sim=1 scripted trace)
 src/components/        OwlNavigator (the owl UI), DiagnosticDashboard
+src/**/*.test.ts       Frontend geometry / navigator tests
 server/engine.js       Server-side recomputation of navigation truth
 server/companion.js    Gemini agent turn handler (guidance + dialogue)
 server/validator.js    The gate: rejects guidance that breaks the rules
 server/voice.js        Gemini TTS — strictly downstream of the validator
-*.test.js / *.test.ts  Tests, alongside the file they cover
+server/*.test.js       Engine / validator / voice integration tests
 docs/architecture.svg  Architecture diagram
 ```
 
