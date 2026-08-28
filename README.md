@@ -123,7 +123,7 @@ server/engine.js       Server-side recomputation of navigation truth
 server/companion.js    Gemini agent turn handler (guidance + dialogue)
 server/validator.js    The gate: rejects guidance that breaks the rules
 server/voice.js        Gemini TTS — strictly downstream of the validator
-server/*.test.js       Engine / validator / voice integration tests
+server/*.test.js       Engine / validator / voice tests
 docs/architecture.svg  Architecture diagram
 ```
 
