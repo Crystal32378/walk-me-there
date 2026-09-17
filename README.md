@@ -1,6 +1,9 @@
 # Walk Me There
 
-> **Maps know the route. Walk Me There helps the human actually follow it.**
+> **牠知道就帶你。牠不知道，就陪你問。**  
+> If it knows, it guides you. If it doesn't, it stays with you and helps you ask.
+>
+> *Maps know the route. Walk Me There helps the human actually follow it.*
 
 Walk Me There is a mobile walking companion for people who can know the address, have directions in front of them, and still wonder:
 
